@@ -1,44 +1,41 @@
 package server.auth;
 
-import java.util.List;
+import java.sql.*;
 
 public class BaseAuthService implements AuthService {
 
-    private static class UserData {
-        private String login;
-        private String password;
-        private String username;
-
-        public UserData(String login, String password, String username) {
-            this.login = login;
-            this.password = password;
-            this.username = username;
-        }
-    }
-
-    private static final List<UserData> USER_DATA = List.of(
-            new UserData("login1", "pass1", "username1"),
-            new UserData("login2", "pass2", "username2"),
-            new UserData("login3", "pass3", "username3")
-    );
+    private static Connection connection;
+    private static Statement statement;
 
     @Override
     public String getUsernameByLoginAndPassword(String login, String password) {
-        for (UserData userDatum : USER_DATA) {
-            if (userDatum.login.equals(login) && userDatum.password.equals(password)) {
-                return userDatum.username;
-            }
+        String query = String.format("select username from users where login='%s' and password='%s'", login, password);
+        try (ResultSet set = statement.executeQuery(query)) {
+            if (set.next())
+                return set.getString(1);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
         return null;
     }
 
     @Override
     public void start() {
-        System.out.println("Сервис аутентификации запущен");
+        try {
+            Class.forName("org.sqlite.JDBC");
+            connection = DriverManager.getConnection("jdbc:sqlite:NetworkServer/users.db");
+            statement = connection.createStatement();
+        } catch (ClassNotFoundException | SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public void stop() {
-        System.out.println("Сервис аутентификации оставлен");
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
