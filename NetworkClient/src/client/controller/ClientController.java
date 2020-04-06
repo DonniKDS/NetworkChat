@@ -1,5 +1,6 @@
 package client.controller;
 
+import client.log.LogHistory;
 import client.model.NetworkService;
 import client.view.AuthDialog;
 import client.view.ClientChat;
@@ -15,6 +16,7 @@ public class ClientController {
     private final AuthDialog authDialog;
     private final ClientChat clientChat;
     private String nickname;
+    private String login;
 
     public ClientController(String serverHost, int serverPort) {
         this.networkService = new NetworkService(serverHost, serverPort);
@@ -48,7 +50,9 @@ public class ClientController {
                 clientChat.appendMessage(message);
             }
         });
+        List<String> list = LogHistory.readHistoryFromFile(login);
         clientChat.setVisible(true);
+        clientChat.appendHistory(list);
     }
 
     private void setUserName(String nickname) {
@@ -65,6 +69,7 @@ public class ClientController {
     }
 
     public void sendAuthMessage(String login, String pass) throws IOException {
+        this.login = login;
         networkService.sendCommand(authCommand(login, pass));
     }
 
@@ -107,5 +112,9 @@ public class ClientController {
         users.remove(nickname);
         users.add(0, "All");
         clientChat.updateUsers(users);
+    }
+
+    public String getLogin() {
+        return login;
     }
 }

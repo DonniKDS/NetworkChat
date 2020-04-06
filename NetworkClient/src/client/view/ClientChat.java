@@ -1,6 +1,7 @@
 package client.view;
 
 import client.controller.ClientController;
+import client.log.LogHistory;
 
 import javax.swing.*;
 import java.awt.event.WindowAdapter;
@@ -60,8 +61,22 @@ public class ClientChat extends JFrame {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
+                LogHistory.writeLineToFile(controller.getLogin(), message);
                 chatText.append(message);
                 chatText.append(System.lineSeparator());
+            }
+        });
+    }
+
+    public void appendHistory(List<String> list){
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                while (!list.isEmpty()){
+                    chatText.append(list.get(0));
+                    chatText.append(System.lineSeparator());
+                    list.remove(0);
+                }
             }
         });
     }
