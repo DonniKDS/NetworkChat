@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ClientHandler {
 
@@ -36,7 +38,9 @@ public class ClientHandler {
             out = new ObjectOutputStream(socket.getOutputStream());
             in = new ObjectInputStream(socket.getInputStream());
 
-            new Thread(() -> {
+
+            ExecutorService executorService = Executors.newCachedThreadPool();
+            executorService.execute(() -> {
                 try {
                     authentication();
                     readMessages();
@@ -45,7 +49,7 @@ public class ClientHandler {
                 } finally {
                     closeConnection();
                 }
-            }).start();
+            });
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -92,7 +96,7 @@ public class ClientHandler {
 
     private Command readCommand() throws IOException {
         try {
-             return (Command) in.readObject();
+            return (Command) in.readObject();
         } catch (ClassNotFoundException e) {
             String errorMessage = "Unknown type of object from client!";
             System.err.println(errorMessage);
@@ -103,7 +107,8 @@ public class ClientHandler {
     }
 
     private void authentication() throws IOException {
-        Thread thread = new Thread(() -> {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        executorService.execute(() -> {
             try {
                 Thread.sleep(120000);
                 clientSocket.close();
@@ -114,15 +119,13 @@ public class ClientHandler {
             }
         });
 
-        thread.start();
-
         while (true) {
             Command command = readCommand();
             if (command == null) {
                 continue;
             }
             if (command.getType() == CommandType.AUTH) {
-                thread.interrupt();
+                executorService.shutdown();
                 boolean successfulAuth = processAuthCommand(command);
                 if (successfulAuth){
                     return;
