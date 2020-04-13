@@ -5,6 +5,8 @@ import client.CommandType;
 import client.command.AuthCommand;
 import client.command.BroadcastMessageCommand;
 import client.command.PrivateMessageCommand;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import server.NetworkServer;
 
 import java.io.IOException;
@@ -15,6 +17,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ClientHandler {
+
+    private static final Logger LOGGER = LogManager.getLogger(ClientHandler.class);
 
     private final NetworkServer networkServer;
     private final Socket clientSocket;
@@ -45,7 +49,8 @@ public class ClientHandler {
                     authentication();
                     readMessages();
                 } catch (IOException e) {
-                    System.out.println("Соединение с клиентом " + nickname + " было закрыто!");
+//                    System.out.println("Соединение с клиентом " + nickname + " было закрыто!");
+                    LOGGER.info("Соединение с клиентом " + nickname + " было закрыто!");
                 } finally {
                     closeConnection();
                 }
@@ -79,12 +84,14 @@ public class ClientHandler {
                     PrivateMessageCommand commandData = (PrivateMessageCommand) command.getData();
                     String receiver = commandData.getReceiver();
                     String message = commandData.getMessage();
+                    LOGGER.trace("Сообщение от " + nickname + " для " + receiver + ": " + message);
                     networkServer.sendMessage(receiver, Command.messageCommand(nickname, message));
                     break;
                 }
                 case BROADCAST_MESSAGE: {
                     BroadcastMessageCommand commandData = (BroadcastMessageCommand) command.getData();
                     String message = commandData.getMessage();
+                    LOGGER.trace("Сообщение от " + nickname + ": " + message);
                     networkServer.broadcastMessage(Command.messageCommand(nickname, message), this);
                     break;
                 }
@@ -111,6 +118,7 @@ public class ClientHandler {
         executorService.execute(() -> {
             try {
                 Thread.sleep(120000);
+                LOGGER.debug("Истекло время ожидания авторизации клиента.");
                 clientSocket.close();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -154,6 +162,7 @@ public class ClientHandler {
         else {
             nickname = username;
             String message = nickname + " зашел в чат!";
+            LOGGER.trace(message);
             networkServer.broadcastMessage(Command.messageCommand(null, message), this);
             commandData.setUsername(nickname);
             sendMessage(command);

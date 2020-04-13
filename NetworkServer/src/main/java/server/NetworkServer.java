@@ -1,6 +1,7 @@
 package server;
 
 import client.Command;
+import org.apache.log4j.Logger;
 import server.auth.AuthService;
 import server.auth.BaseAuthService;
 import server.client.ClientHandler;
@@ -13,6 +14,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class NetworkServer {
+
+    private static final Logger LOGGER = Logger.getLogger(NetworkServer.class);
 
     private final int port;
 //    private final List<ClientHandler> clients = new ArrayList<>();
@@ -27,16 +30,19 @@ public class NetworkServer {
 
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Сервер был успешно запущен на порту " + port);
+//            System.out.println("Сервер был успешно запущен на порту " + port);
+            LOGGER.info("Сервер был успешно запущен на порту " + port);
             authService.start();
             while (true) {
                 System.out.println("Ожидание клиентского подключения...");
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("Клиент подлючился");
+//                System.out.println("Клиент подлючился");
+                LOGGER.info("Клиент подлючился");
                 createClientHandler(clientSocket);
             }
         } catch (IOException e) {
-            System.out.println("Ошибка при работе сервера");
+//            System.out.println("Ошибка при работе сервера");
+            LOGGER.error("Ошибка при работе сервера");
             e.printStackTrace();
         } finally {
             authService.stop();
