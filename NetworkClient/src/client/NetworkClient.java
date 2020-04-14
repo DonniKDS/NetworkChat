@@ -1,6 +1,6 @@
 package client;
 
-import ru.geekbrains.java2.client.controller.ClientController;
+import client.controller.ClientController;
 
 import java.io.IOException;
 
