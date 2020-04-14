@@ -1,8 +1,13 @@
 package server.auth;
 
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
+
 import java.sql.*;
 
 public class BaseAuthService implements AuthService {
+
+    private static final Logger LOGGER = LogManager.getLogger(BaseAuthService.class);
 
     private static Connection connection;
     private static Statement statement;
@@ -14,6 +19,7 @@ public class BaseAuthService implements AuthService {
             if (set.next())
                 return set.getString(1);
         } catch (SQLException e) {
+            LOGGER.error("Ошибка подключенния к базе данных.");
             throw new RuntimeException(e);
         }
         return null;
@@ -26,6 +32,7 @@ public class BaseAuthService implements AuthService {
             connection = DriverManager.getConnection("jdbc:sqlite:NetworkServer/users.db");
             statement = connection.createStatement();
         } catch (ClassNotFoundException | SQLException e) {
+            LOGGER.error("Ошибка подключенния к базе данных.");
             throw new RuntimeException(e);
         }
     }
@@ -35,6 +42,7 @@ public class BaseAuthService implements AuthService {
         try {
             connection.close();
         } catch (SQLException e) {
+            LOGGER.error("Ошибка подключенния к базе данных.");
             throw new RuntimeException(e);
         }
     }

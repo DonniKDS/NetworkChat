@@ -5,14 +5,20 @@ import client.CommandType;
 import client.command.AuthCommand;
 import client.command.BroadcastMessageCommand;
 import client.command.PrivateMessageCommand;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import server.NetworkServer;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ClientHandler {
+
+    private static final Logger LOGGER = LogManager.getLogger(ClientHandler.class);
 
     private final NetworkServer networkServer;
     private final Socket clientSocket;
@@ -36,16 +42,19 @@ public class ClientHandler {
             out = new ObjectOutputStream(socket.getOutputStream());
             in = new ObjectInputStream(socket.getInputStream());
 
-            new Thread(() -> {
+
+            ExecutorService executorService = Executors.newCachedThreadPool();
+            executorService.execute(() -> {
                 try {
                     authentication();
                     readMessages();
                 } catch (IOException e) {
-                    System.out.println("Соединение с клиентом " + nickname + " было закрыто!");
+//                    System.out.println("Соединение с клиентом " + nickname + " было закрыто!");
+                    LOGGER.info("Соединение с клиентом " + nickname + " было закрыто!");
                 } finally {
                     closeConnection();
                 }
-            }).start();
+            });
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -75,12 +84,14 @@ public class ClientHandler {
                     PrivateMessageCommand commandData = (PrivateMessageCommand) command.getData();
                     String receiver = commandData.getReceiver();
                     String message = commandData.getMessage();
+                    LOGGER.trace("Сообщение от " + nickname + " для " + receiver + ": " + message);
                     networkServer.sendMessage(receiver, Command.messageCommand(nickname, message));
                     break;
                 }
                 case BROADCAST_MESSAGE: {
                     BroadcastMessageCommand commandData = (BroadcastMessageCommand) command.getData();
                     String message = commandData.getMessage();
+                    LOGGER.trace("Сообщение от " + nickname + ": " + message);
                     networkServer.broadcastMessage(Command.messageCommand(nickname, message), this);
                     break;
                 }
@@ -92,7 +103,7 @@ public class ClientHandler {
 
     private Command readCommand() throws IOException {
         try {
-             return (Command) in.readObject();
+            return (Command) in.readObject();
         } catch (ClassNotFoundException e) {
             String errorMessage = "Unknown type of object from client!";
             System.err.println(errorMessage);
@@ -103,9 +114,11 @@ public class ClientHandler {
     }
 
     private void authentication() throws IOException {
-        Thread thread = new Thread(() -> {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        executorService.execute(() -> {
             try {
                 Thread.sleep(120000);
+                LOGGER.debug("Истекло время ожидания авторизации клиента.");
                 clientSocket.close();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -114,15 +127,13 @@ public class ClientHandler {
             }
         });
 
-        thread.start();
-
         while (true) {
             Command command = readCommand();
             if (command == null) {
                 continue;
             }
             if (command.getType() == CommandType.AUTH) {
-                thread.interrupt();
+                executorService.shutdown();
                 boolean successfulAuth = processAuthCommand(command);
                 if (successfulAuth){
                     return;
@@ -151,6 +162,7 @@ public class ClientHandler {
         else {
             nickname = username;
             String message = nickname + " зашел в чат!";
+            LOGGER.trace(message);
             networkServer.broadcastMessage(Command.messageCommand(null, message), this);
             commandData.setUsername(nickname);
             sendMessage(command);
